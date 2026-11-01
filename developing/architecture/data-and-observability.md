@@ -3940,13 +3940,13 @@ Permanent Space purge erases its graph before removing the owning source storage
 Deletion first fences new captures in the subject registry. Reads and new callbacks
 cannot revive the tombstone; an already-started write rechecks that fence and
 cleans up a late result. The write remains registered with `waitUntil` even if
-the caller's bounded wait expires. Failed cleanup remains diagnosable and retryable.
+the caller's bounded wait expires. Only confirmed deletion or a provider HTTP 404 permits cleanup to finish. Permission failures, unknown outcomes and timeouts remain retryable.
 Account erasure distinguishes Space, member and Organization subjects. Ordinary
 Space deletion retains history under the existing Space retention/access policy;
 it is not a claim that retained source history was permanently erased.
 
 Versioned OpenMeld explicit saves reuse the existing message evidence contract.
-The selected excerpt must occur in the current referenced source version, in
+The submitted fact must equal the complete current message (after trimming) in
 the original conversation, with current represented-member access. The episode
 uses the source author and source-version time (`editedAt` when present), never
 the later save request's time or an Agent paraphrase labeled as a user statement.

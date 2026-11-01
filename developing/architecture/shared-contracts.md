@@ -5770,7 +5770,7 @@ envelope. No raw source IDs enter automatic memory text.
 OpenMeld explicit saves accept the existing `SpaceEvidenceReference` message
 variant as `sourceRef`. It is optional at the shared request-shape level because
 Channels retain their prior contract; Core requires it for OpenMeld sources and
-verifies an exact excerpt against the owning message version. An old OpenMeld
+requires the submitted fact to match the complete owning message version. An old OpenMeld
 caller without a reference gets a conflict and makes no provider write.
 
 #### Space memory contract impact audit

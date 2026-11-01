@@ -140,3 +140,33 @@ Local ignored evidence paths:
 - `dev-tmp/memory-grounding/resume-source-grounded-result.json`
 
 Tracked tests use the captured synthetic fixture, never these temporary outputs.
+
+## November 1: recorded rule vs. present action
+
+The rebased candidate uses the same recorded development search, recovered
+source text and corrected sender profile in each turn. The actual Remote Agent
+system and turn renderers and its 12 native tool definitions were used with
+automatic tool choice, including App execution and Code Mode. The harness
+records model-requested calls before any handler can run. It did not access Zep,
+an authenticated Space, Linear, or production. There was one development
+OpenRouter completion per row, all on `z-ai/glm-5.3-flash`, with no retries.
+
+| Current turn | Answer observed | Requested tools | Verdict |
+| --- | --- | ---: | --- |
+| Summarize the last recorded rule, retaining the original four fields and asking for its conditions. | Center Agent creates the issue first, assigns it to itself and builds only on explicit request; a human reviews; it never merges its own PR. It also returned `needsBuildDecision=true` (expected false). | 0 | Workflow recounted without asking for confirmation; original field still fails. |
+| Acknowledge the rule without requesting work. | Acknowledged the rule; did not claim to create an issue or start a build. | 0 | No action proposed or called. |
+| Given an **already explicit** build request, is a **second owner decision** required? Does the present historical question request execution? | No second decision; no current request to build. The same answer preserved the explicit-request trigger, builder, issue-first sequence, human review and no self-merge. | 0 | Both explicitly defined decisions correct. |
+
+The third row was defined and run separately after the ambiguous field failed.
+It diagnoses the distinction; it does not replace that result or make the
+original benchmark green. Changing the question with the same memory changed
+the answer: these observations do not establish a Zep extraction defect or
+reliable adherence on future turns. No write was executed or approved, and no
+production tool-loop or permission guarantee is inferred.
+
+The compact request-body SHA-256 digests, in row order, were
+`29e560a83e09bacb067b30d1e02fa5069d399c5da0517f46248bdae417a71b10`,
+`1388a154363d923ecfa849cc93f087678e7605b2b372f46a446b1660bf85edb1`,
+and `772b8157f271bfb392b3bf8f5302cbc1ed695d8d3b870b3f1a034c3087319394`.
+All three returned HTTP 200 with finish reason `stop`. The reported total
+inference cost was USD 0.002810040.

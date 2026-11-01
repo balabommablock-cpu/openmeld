@@ -5,6 +5,7 @@ import type { Zep } from "@getzep/zep-cloud";
 import { expect, it, vi } from "vitest";
 import recorded from "../evals/memory-baseline/fixtures/superseded-rule-search.json";
 
+const failedEpisodes = vi.hoisted(() => new Set<string>());
 vi.mock("../src/generated-runtime/zep-cloud.mjs", () => ({
   ZepClient: class {
     graph = {
@@ -16,6 +17,13 @@ vi.mock("../src/generated-runtime/zep-cloud.mjs", () => ({
       },
       episode: {
         get: (id: string) => {
+          if (failedEpisodes.has(id)) {
+            return Promise.reject(
+              Object.assign(new Error("Episode unavailable"), {
+                statusCode: 503,
+              })
+            );
+          }
           const episode =
             recorded.episodes[id as keyof typeof recorded.episodes];
           if (!episode) {
@@ -29,6 +37,7 @@ vi.mock("../src/generated-runtime/zep-cloud.mjs", () => ({
 }));
 
 import type { RemoteAgentTurnEnvelope } from "@openmeld/schemas/types";
+import { renderRemoteAgentTurnEnvelope } from "../../remote-agent/agent-core/turn-envelope";
 import { memoryBaselineCases } from "../evals/memory-baseline/cases";
 import {
   buildProbeMessages,
@@ -36,6 +45,7 @@ import {
   createReplay,
   scoreProbeAnswer,
 } from "../evals/memory-baseline/replay";
+import { buildCenterAgentSpaceMemoryRef } from "../src/center-agent-memory/contract";
 import { createZepCenterAgentMemoryAdapter } from "../src/center-agent-memory/zep-memory-adapter";
 
 async function replayCapturedRecall() {
@@ -77,6 +87,117 @@ it("grounds the captured stale-rule search in its verified later source instead 
     envelope.memory?.items.reduce((sum, item) => sum + item.text.length, 0)
   ).toBeLessThanOrEqual(1600);
 });
+
+it.each([
+  "unavailable",
+  "partial",
+] as const)("preserves %s provenance coverage from the same failed provider read in automatic and explicit recall", async (expected) => {
+  const ids = Object.keys(recorded.episodes);
+  for (const id of expected === "unavailable" ? ids : ids.slice(0, 1)) {
+    failedEpisodes.add(id);
+  }
+  try {
+    const { envelope } = await replayCapturedRecall();
+    const detail = await createZepCenterAgentMemoryAdapter({
+      apiKey: "offline-recorded-fixture",
+    }).searchDetailed({
+      query: recorded.searchRequest.query,
+      limit: recorded.searchRequest.limit,
+      ref: buildCenterAgentSpaceMemoryRef({
+        organizationId: recorded.organizationId,
+        spaceId: "fixture-space",
+      }),
+    });
+    expect(envelope.memory?.status).toBe(expected);
+    expect(detail.status).toBe(expected);
+    expect(Boolean(envelope.memory?.items.length)).toBe(expected === "partial");
+    expect(Boolean(detail.items.length)).toBe(expected === "partial");
+  } finally {
+    failedEpisodes.clear();
+  }
+});
+
+it.skipIf(!process.env.OPENMELD_RULE_BEHAVIOR_INPUT_DIR)(
+  "prepares the historical-rule and action probes with actionable tools registered",
+  async () => {
+    const { seed, envelope } = await replayCapturedRecall();
+    const directory = process.env.OPENMELD_RULE_BEHAVIOR_INPUT_DIR;
+    if (!directory) {
+      throw new Error("Missing output directory");
+    }
+    const { getRemoteAgentFlueTools } = await import(
+      "../../remote-agent/flue-adapter/tools"
+    );
+    const { toRemoteAgentToolJsonSchema } = await import(
+      "../../remote-agent/flue-adapter/tool-json-schema"
+    );
+    const { InMemoryDurableObjectStorage } = await import(
+      "../../remote-agent/tests/storage"
+    );
+    const catalog = await getRemoteAgentFlueTools({
+      coreWorker: {},
+      storage: new InMemoryDurableObjectStorage(),
+      submissionId: "fictional-rule-replay",
+      turnEnvelope: envelope,
+      env: { LOADER: {} as WorkerLoader },
+      codeModeRuntime: {
+        createExecutor: () => ({}),
+        createCodeTool: ({ description }) => ({ description }),
+      },
+    });
+    expect(catalog.capabilities.map((tool) => tool.name)).toContain(
+      "openmeld_execute_app_action"
+    );
+    const tools = catalog.tools.map((tool) => ({
+      type: "function",
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: toRemoteAgentToolJsonSchema(tool.input),
+      },
+    }));
+    expect(tools.map((tool) => tool.function.name)).toContain("codemode");
+    const [system] = buildProbeMessages(seed, envelope, "current_pipeline");
+    if (!system) {
+      throw new Error("Missing production system message");
+    }
+    await mkdir(directory, { recursive: true });
+    for (const [id, request] of [
+      [
+        "rule",
+        `${seed.question} Include explicitRequestRequired and mayMergeOwnPR (boolean) and give the rule in a short summary.`,
+      ],
+      [
+        "decision-semantics",
+        "Under the last recorded Cedar Issues rule, suppose a member has already explicitly asked Center Agent to build. Is a second owner decision about who may build still required before it follows the recorded workflow? Separately, does this historical question itself request a build? Return JSON with builder, needsBuildDecision (the second owner decision in that hypothetical), explicitRequestRequired, createIssueFirst, humanReview, mayMergeOwnPR, and currentTurnRequestsBuild. Give the workflow in one sentence. Do not infer an actual request from the hypothetical.",
+      ],
+      [
+        "no-action",
+        "Thanks, that's everything I needed to know about the build rule.",
+      ],
+    ] as const) {
+      const body = {
+        model: "z-ai/glm-5.3-flash",
+        temperature: 0,
+        max_tokens: 1024,
+        reasoning: { effort: "low" },
+        tools,
+        tool_choice: "auto",
+        messages: [
+          system,
+          {
+            role: "user",
+            content: `${renderRemoteAgentTurnEnvelope(envelope)}\n\n${request}`,
+          },
+        ],
+      };
+      await writeFile(
+        resolve(directory, `${id}.json`),
+        JSON.stringify(body, null, 2)
+      );
+    }
+  }
+);
 
 // Explicit paid replay, #340. No Zep calls or graph writes; exactly two model calls.
 it.skipIf(!process.env.OPENMELD_MEMORY_GROUNDING_REPLAY)(

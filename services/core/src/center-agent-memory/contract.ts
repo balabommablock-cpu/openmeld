@@ -100,15 +100,17 @@ export type CenterAgentMemoryDetailedSearchItem = {
   sources: Omit<CenterAgentMemorySearchResult, "text" | "subject">[];
 };
 
+export type CenterAgentMemoryRead<T> = {
+  items: T[];
+  status: "complete" | "partial" | "unavailable";
+};
+
 export type CenterAgentMemoryDetailedReader = {
   searchDetailed(input: {
     limit: number;
     query: string;
     ref: CenterAgentMemoryRef;
-  }): Promise<{
-    items: CenterAgentMemoryDetailedSearchItem[];
-    status: "complete" | "partial";
-  }>;
+  }): Promise<CenterAgentMemoryRead<CenterAgentMemoryDetailedSearchItem>>;
 };
 
 export type CenterAgentMemoryReadRepository = {
@@ -134,7 +136,7 @@ export type CenterAgentMemoryAdapter = {
     limit: number;
     query: string;
     ref: CenterAgentMemoryRef;
-  }): Promise<CenterAgentMemorySearchResult[]>;
+  }): Promise<CenterAgentMemoryRead<CenterAgentMemorySearchResult>>;
 };
 
 export type CenterAgentMemoryRepository = CenterAgentMemoryReadRepository & {

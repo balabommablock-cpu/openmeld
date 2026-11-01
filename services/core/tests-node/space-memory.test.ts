@@ -78,12 +78,15 @@ it.each([
     await pending.promise;
     const items = f.search(input);
     if (change === "foreign_support") {
-      return items.map((item) => ({
-        ...item,
-        supportingSources: [{ ...item, sourceConversationId: "space-b" }],
-      }));
+      return {
+        status: "complete",
+        items: items.map((item) => ({
+          ...item,
+          supportingSources: [{ ...item, sourceConversationId: "space-b" }],
+        })),
+      };
     }
-    return items;
+    return { status: "complete", items };
   };
   const read = f.recall("space-a");
   await started.promise;
@@ -98,6 +101,26 @@ it.each([
   }
   pending.resolve();
   expect((await read).items).toEqual([]);
+});
+
+it("keeps a failed Space purge fenced and retryable until the provider confirms erasure", async () => {
+  const f = await fixture();
+  await f.capture("space-a");
+  const ref = { organizationId: f.organizationId, spaceId: "space-a" };
+  const erase = f.adapter.deleteOrganizationGraph;
+  f.adapter.deleteOrganizationGraph = () =>
+    Promise.reject(
+      Object.assign(new Error("missing permission"), { statusCode: 403 })
+    );
+  await expect(f.service.deleteSpaceMemory(ref)).rejects.toThrow(
+    "missing permission"
+  );
+  expect([...f.facts.values()].flat()).toHaveLength(1);
+  expect((await f.recall("space-a")).items).toEqual([]);
+  await expect(f.capture("space-a")).rejects.toThrow("space_deleted");
+  f.adapter.deleteOrganizationGraph = erase;
+  await expect(f.service.deleteSpaceMemory(ref)).resolves.toBe("deleted");
+  expect([...f.facts.values()].flat()).toEqual([]);
 });
 
 it("keeps a late write from restoring erased Space memory", async () => {
@@ -145,14 +168,17 @@ it("keeps same-name speakers distinguishable through original-source grounding",
     sourceVersion: OTHER_VERSION,
     occurredAtMs: 2000,
   };
-  f.adapter.search = async () => [
-    {
-      ...first,
-      subject: "space",
-      text: "A member prefers short updates.",
-      supportingSources: [first, second],
-    },
-  ];
+  f.adapter.search = async () => ({
+    status: "complete",
+    items: [
+      {
+        ...first,
+        subject: "space",
+        text: "A member prefers short updates.",
+        supportingSources: [first, second],
+      },
+    ],
+  });
   f.spaceAccess.readSource = async ({ signalId }) =>
     signalId === "first"
       ? {
@@ -295,7 +321,7 @@ async function fixture() {
       return Promise.resolve("deleted");
     },
     addEpisode: add,
-    search: async (input) => search(input),
+    search: async (input) => ({ status: "complete", items: search(input) }),
   };
   const background: Promise<unknown>[] = [];
   const service = createCenterAgentMemoryService({

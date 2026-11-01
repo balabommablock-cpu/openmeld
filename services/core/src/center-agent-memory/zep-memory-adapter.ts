@@ -15,6 +15,8 @@ import type {
   CenterAgentMemorySource,
 } from "./contract";
 
+import { combineMemoryReadStatus } from "./memory-selection";
+
 type ZepClientLike = {
   graph: {
     add(
@@ -37,7 +39,6 @@ type ZepClientLike = {
 type ZepMemoryAdapterLogger = Pick<Console, "warn">;
 
 const ALREADY_EXISTS_ERROR_PATTERN = /already exists|conflict/i;
-const NOT_FOUND_ERROR_PATTERN = /not found|missing/i;
 const SOURCE_VERSION_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const CENTER_AGENT_MEMORY_MAX_PROVENANCE_EPISODES_PER_EDGE =
   CENTER_AGENT_RETAINED_MEMORY_MAX_SOURCES;
@@ -143,7 +144,14 @@ export function createZepCenterAgentMemoryAdapter(input: {
         subject: searchInput.ref.subject.kind,
       });
     }
-    return records;
+    return {
+      records,
+      status: combineMemoryReadStatus(
+        records.map((record) =>
+          record.status === "resolved" ? "complete" : "unavailable"
+        )
+      ),
+    };
   }
 
   return {
@@ -218,26 +226,29 @@ export function createZepCenterAgentMemoryAdapter(input: {
 
     async search(searchInput) {
       // Automatic prompt recall retains its existing single-origin projection.
-      const records = await searchRecords(
+      const { records, status } = await searchRecords(
         searchInput,
         searchInput.ref.subject.kind === "space"
       );
-      return records.flatMap((record) =>
-        record.status === "resolved"
-          ? [
-              {
-                ...record.item,
-                ...(searchInput.ref.subject.kind === "space" ||
-                record.sources.some((source) => source.sourceAuthorKind)
-                  ? { supportingSources: record.sources }
-                  : {}),
-              },
-            ]
-          : []
-      );
+      return {
+        status,
+        items: records.flatMap((record) =>
+          record.status === "resolved"
+            ? [
+                {
+                  ...record.item,
+                  ...(searchInput.ref.subject.kind === "space" ||
+                  record.sources.some((source) => source.sourceAuthorKind)
+                    ? { supportingSources: record.sources }
+                    : {}),
+                },
+              ]
+            : []
+        ),
+      };
     },
     async searchDetailed(searchInput) {
-      const records = await searchRecords(searchInput, true);
+      const { records, status } = await searchRecords(searchInput, true);
       return {
         items: records.flatMap((record) =>
           record.status === "resolved"
@@ -250,9 +261,7 @@ export function createZepCenterAgentMemoryAdapter(input: {
               ]
             : []
         ),
-        status: records.some((record) => record.status === "omitted")
-          ? "partial"
-          : "complete",
+        status,
       };
     },
   };
@@ -715,9 +724,7 @@ function isAlreadyExistsError(error: unknown): boolean {
 }
 
 function isNotFoundError(error: unknown): boolean {
-  return (
-    isZepStatus(error, 404) || NOT_FOUND_ERROR_PATTERN.test(toMessage(error))
-  );
+  return isZepStatus(error, 404);
 }
 
 function isZepStatus(error: unknown, status: number): boolean {

@@ -50,6 +50,27 @@ describe("Zep Center Agent memory adapter", () => {
     zepMocks.searchGraph.mockResolvedValue({});
   });
 
+  it("only accepts an explicit provider 404 as confirmation of an absent Space graph", async () => {
+    const ref = buildCenterAgentSpaceMemoryRef({
+      organizationId: "org_1",
+      spaceId: "space_1",
+    });
+    const adapter = createZepCenterAgentMemoryAdapter({ apiKey: "zep_test" });
+    for (const error of [
+      Object.assign(new Error("missing permission"), { statusCode: 403 }),
+      new Error("missing response"),
+    ]) {
+      zepMocks.deleteGraph.mockRejectedValueOnce(error);
+      await expect(adapter.deleteOrganizationGraph(ref)).rejects.toBe(error);
+    }
+    zepMocks.deleteGraph.mockRejectedValueOnce(
+      Object.assign(new Error("not found"), { statusCode: 404 })
+    );
+    await expect(adapter.deleteOrganizationGraph(ref)).resolves.toBe(
+      "not_found"
+    );
+  });
+
   it.each([
     "human",
     "agent",
@@ -105,19 +126,22 @@ describe("Zep Center Agent memory adapter", () => {
     } satisfies Zep.GraphSearchResults);
     expect(
       await adapter.search({ ref, query: "Original statement", limit: 6 })
-    ).toEqual([
-      expect.objectContaining({
-        subject: "space",
-        sourceVersion: version,
-        sourceAuthorKind: authorKind,
-        supportingSources: [
-          expect.objectContaining({
-            sourceVersion: version,
-            sourceAuthorKind: authorKind,
-          }),
-        ],
-      }),
-    ]);
+    ).toEqual({
+      status: "complete",
+      items: [
+        expect.objectContaining({
+          subject: "space",
+          sourceVersion: version,
+          sourceAuthorKind: authorKind,
+          supportingSources: [
+            expect.objectContaining({
+              sourceVersion: version,
+              sourceAuthorKind: authorKind,
+            }),
+          ],
+        }),
+      ],
+    });
   });
 
   it("stores structured provenance with every memory episode", async () => {
@@ -205,17 +229,20 @@ describe("Zep Center Agent memory adapter", () => {
         query: "What tracks our release blockers?",
         ref: ORGANIZATION_MEMORY_REF,
       })
-    ).resolves.toEqual([
-      {
-        captureMethod: "automatic_turn",
-        occurredAtMs: 1_753_574_400_000,
-        source: "space_conversation",
-        sourceConversationId: "space_launch_room",
-        sourceMessageId: "signal_launch_1",
-        subject: "organization",
-        text: "[Fact validity: from 2025-07-26T00:00:00.000Z; until 2025-08-01T00:00:00.000Z; superseded 2025-08-02T00:00:00.000Z] The Launch Room tracks release blockers.",
-      },
-    ]);
+    ).resolves.toEqual({
+      status: "complete",
+      items: [
+        {
+          captureMethod: "automatic_turn",
+          occurredAtMs: 1_753_574_400_000,
+          source: "space_conversation",
+          sourceConversationId: "space_launch_room",
+          sourceMessageId: "signal_launch_1",
+          subject: "organization",
+          text: "[Fact validity: from 2025-07-26T00:00:00.000Z; until 2025-08-01T00:00:00.000Z; superseded 2025-08-02T00:00:00.000Z] The Launch Room tracks release blockers.",
+        },
+      ],
+    });
     expect(zepMocks.getEpisode).toHaveBeenCalledWith("episode_space_1");
   });
 
@@ -253,18 +280,21 @@ describe("Zep Center Agent memory adapter", () => {
         query: "When are launch reviews?",
         ref: ORGANIZATION_MEMORY_REF,
       })
-    ).resolves.toEqual([
-      {
-        captureMethod: "automatic_turn",
-        messageChannelProvider: "lark",
-        occurredAtMs: 1_753_574_400_000,
-        source: "message_channel_conversation",
-        sourceConversationId: "lark:connection_1:chat_1:message_1",
-        sourceMessageId: "message_1",
-        subject: "organization",
-        text: "[Fact validity: unknown] Launch reviews happen on Fridays.",
-      },
-    ]);
+    ).resolves.toEqual({
+      status: "complete",
+      items: [
+        {
+          captureMethod: "automatic_turn",
+          messageChannelProvider: "lark",
+          occurredAtMs: 1_753_574_400_000,
+          source: "message_channel_conversation",
+          sourceConversationId: "lark:connection_1:chat_1:message_1",
+          sourceMessageId: "message_1",
+          subject: "organization",
+          text: "[Fact validity: unknown] Launch reviews happen on Fridays.",
+        },
+      ],
+    });
   });
 
   it("selects the earliest associated episode instead of trusting provider array order", async () => {
@@ -320,17 +350,20 @@ describe("Zep Center Agent memory adapter", () => {
         query: "When is the release review?",
         ref: ORGANIZATION_MEMORY_REF,
       })
-    ).resolves.toEqual([
-      {
-        captureMethod: "explicit_save",
-        occurredAtMs: 1_753_574_400_000,
-        source: "space_conversation",
-        sourceConversationId: "space_original",
-        sourceMessageId: "message_original",
-        subject: "organization",
-        text: "[Fact validity: unknown] The release review happens on Fridays.",
-      },
-    ]);
+    ).resolves.toEqual({
+      status: "complete",
+      items: [
+        {
+          captureMethod: "explicit_save",
+          occurredAtMs: 1_753_574_400_000,
+          source: "space_conversation",
+          sourceConversationId: "space_original",
+          sourceMessageId: "message_original",
+          subject: "organization",
+          text: "[Fact validity: unknown] The release review happens on Fridays.",
+        },
+      ],
+    });
     expect(zepMocks.getEpisode).toHaveBeenCalledWith("episode_lark_later");
     expect(zepMocks.getEpisode).toHaveBeenCalledWith("episode_space_original");
   });
@@ -374,7 +407,7 @@ describe("Zep Center Agent memory adapter", () => {
         query: "What is the launch plan?",
         ref: ORGANIZATION_MEMORY_REF,
       })
-    ).resolves.toEqual([]);
+    ).resolves.toEqual({ status: "unavailable", items: [] });
     expect(warn).toHaveBeenCalledWith(
       "[core.center_agent_memory.provenance_unavailable]",
       expect.objectContaining({
@@ -428,7 +461,7 @@ describe("Zep Center Agent memory adapter", () => {
         query: "When is the release review?",
         ref: ORGANIZATION_MEMORY_REF,
       })
-    ).resolves.toEqual([]);
+    ).resolves.toEqual({ status: "unavailable", items: [] });
     expect(warn).toHaveBeenCalledWith(
       "[core.center_agent_memory.provenance_unavailable]",
       expect.objectContaining({
@@ -447,6 +480,6 @@ describe("Zep Center Agent memory adapter", () => {
         query: "When is the release review?",
         ref: ORGANIZATION_MEMORY_REF,
       })
-    ).resolves.toEqual({ items: [], status: "partial" });
+    ).resolves.toEqual({ items: [], status: "unavailable" });
   });
 });

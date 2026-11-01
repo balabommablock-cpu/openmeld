@@ -163,3 +163,14 @@ OpenRouter calls and no Zep calls. It uses the same DEV smoke-key handling as
 above. It records request-start state before transmission and has a 150-second
 outer test deadline. An interrupted request is not permission to repeat it;
 retain its unknown outcome and account for any potentially consumed call.
+
+To prepare the recorded-rule, no-action and separate decision-semantics requests
+without network access, run the grounding test with
+`OPENMELD_RULE_BEHAVIOR_INPUT_DIR=../../dev-tmp/rule-behavior` and no live
+mode. It renders the verified Space envelope and registers the current native
+tool catalog for the synthetic member. The original rule fields and their
+expected values are unchanged. Check the workflow and whether the Agent asks
+again; for the no-action turn inspect the actual returned tool calls and any
+claim of action. For the diagnostic, a second owner decision and a current
+build request should both be false. A prepared input is not an inference result.
+See `CANDIDATE_RESULTS.md` for separately recorded observations and limits.

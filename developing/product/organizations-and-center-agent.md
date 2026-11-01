@@ -2507,7 +2507,9 @@ than by the model provider:
   provider returns. Selection preserves rank within each scope and shares both
   the six-item and 1,600-character budgets across eligible scopes. Facts are
   included whole or omitted, preserving exceptions and negations. Omission is
-  visible even when no whole fact fits. Provider fact validity is a bounded
+  visible even when no whole fact fits. In automatic and explicit recall, a
+  provider match with unreadable provenance does not count as a verified miss:
+  coverage is partial when some matches are verifiable and unavailable when none are. Provider fact validity is a bounded
   text hint, with unknown times marked explicitly; occurrence time is not an
   approval time. Current approved documents take precedence over old memory
   for current work, while historical questions may still use historical facts.
@@ -2540,8 +2542,10 @@ than by the model provider:
   replace a Space, Slack, Lark, or Feishu origin with `explicit_tool`, and it
   must consume the same non-conflicting frozen `interactionEnvironment` as an
   automatic write before Core admits the Organization subject.
-- An explicit OpenMeld save requires a source-message evidence reference and an
-  exact excerpt present in that current version. Core rejects missing references,
+- An explicit OpenMeld save requires a source-message evidence reference and the
+  complete text of that version (aside from surrounding whitespace). An excerpt
+  that drops a qualification is not eligible. For a longer or mixed-purpose
+  message, the member can restate only what they want shared in a new message. Core rejects missing references,
   changed/recalled sources, another Space's reference, and invented paraphrases.
   It retains the original author and message-version time rather than attributing
   an Agent summary to the human's later save request. This does not establish a

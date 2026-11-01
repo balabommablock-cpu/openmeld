@@ -4670,7 +4670,7 @@ export function getRemoteAgentOpenMeldToolDefinitions(
     toolDefinition({
       name: "openmeld_remember_for_organization",
       description:
-        "Save source-backed knowledge to shared Organization memory only when the user explicitly requests it. In an OpenMeld Space, first read the original message with openmeld_read_space_updates scope=source_evidence. Supply sourceRef with kind=message, that Space's ID, sourceSignalId=message.sourceRef.id, and version=message.sourceRef.version; fact must be an exact excerpt. A changed source must be read again. Channel saves retain their existing conversation source.",
+        "Save source-backed knowledge to shared Organization memory only when the user explicitly requests it. In an OpenMeld Space, first read the original message with openmeld_read_space_updates scope=source_evidence. Supply sourceRef with kind=message, that Space's ID, sourceSignalId=message.sourceRef.id, and version=message.sourceRef.version; fact must equal the complete message. If only part should be shared, ask for a separate statement. A changed source must be read again. Channel saves retain their existing conversation source.",
       input: object({
         sourceRef: optional(
           object({

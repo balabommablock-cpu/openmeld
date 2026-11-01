@@ -13,6 +13,7 @@ import {
   type CenterAgentMemoryLogger,
   type CenterAgentMemoryNativeDeliveryLedger,
   type CenterAgentMemoryPolicy,
+  type CenterAgentMemoryRead,
   type CenterAgentMemoryRepository,
   type CenterAgentMemorySearchResult,
   type CenterAgentMemorySpaceAccess,
@@ -21,7 +22,10 @@ import {
   type RecallCenterAgentOrganizationMemoryInput,
   type RememberCenterAgentTurnInput,
 } from "./contract";
-import { interleaveMemoryScopes } from "./memory-selection";
+import {
+  combineMemoryReadStatus,
+  interleaveMemoryScopes,
+} from "./memory-selection";
 
 export type CenterAgentMemoryService = {
   deleteSpaceMemory(input: {
@@ -210,14 +214,14 @@ export function createCenterAgentMemoryService(input: {
           current.updatedAtMs === refs[index]?.updatedAtMs
       )
     );
-    const successfulResults = currentResults.filter(
-      (result) => result !== null
-    );
     const memory = projectMemoryEnvelope(
-      interleaveMemoryScopes(successfulResults)
+      interleaveMemoryScopes(currentResults.map((result) => result.items))
     );
-    if (successfulResults.length < currentResults.length) {
-      memory.status = successfulResults.length > 0 ? "partial" : "unavailable";
+    const status = combineMemoryReadStatus(
+      currentResults.map((result) => result.status)
+    );
+    if (status !== "complete") {
+      memory.status = status;
     }
     return memory;
   }
@@ -502,7 +506,7 @@ async function recallMemory(input: {
   validate?: (
     results: CenterAgentMemorySearchResult[]
   ) => Promise<CenterAgentMemorySearchResult[]>;
-}): Promise<CenterAgentMemorySearchResult[] | null> {
+}): Promise<CenterAgentMemoryRead<CenterAgentMemorySearchResult>> {
   try {
     return await withTimeout(
       input.adapter
@@ -511,9 +515,12 @@ async function recallMemory(input: {
           query: truncateMemorySearchQuery(input.query),
           ref: input.ref,
         })
-        .then((results) =>
-          input.validate ? input.validate(results) : results
-        ),
+        .then(async (result) => ({
+          status: result.status,
+          items: input.validate
+            ? await input.validate(result.items)
+            : result.items,
+        })),
       input.timeoutMs,
       "center_agent_memory.recall_timeout"
     );
@@ -523,7 +530,7 @@ async function recallMemory(input: {
       organizationId: input.ref.subject.organizationId,
       subject: input.ref.subject.kind,
     });
-    return null;
+    return { items: [], status: "unavailable" };
   }
 }
 function truncateMemorySearchQuery(query: string): string {

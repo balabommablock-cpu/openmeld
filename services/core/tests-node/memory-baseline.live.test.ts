@@ -410,11 +410,16 @@ it.skipIf(!process.env.OPENMELD_MEMORY_BASELINE)(
               telemetry.phase = `${seed.id}:source_intervention:${queryKind}`;
               const started = performance.now();
               try {
-                const items = await adapter.search({ ref, query, limit: 6 });
+                const { items, status } = await adapter.search({
+                  ref,
+                  query,
+                  limit: 6,
+                });
                 (intervention.searches as unknown[]).push({
                   queryKind,
                   query,
                   items,
+                  status,
                   elapsedMs: Math.round(performance.now() - started),
                 });
               } catch (error) {

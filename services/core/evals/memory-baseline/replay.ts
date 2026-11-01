@@ -158,8 +158,9 @@ export function createReplay(
       };
       searches.push(row);
       try {
-        row.items = await adapter.search(input);
-        return row.items;
+        const read = await adapter.search(input);
+        row.items = read.items;
+        return read;
       } catch (error) {
         row.error = error instanceof Error ? error.name : "UnknownError";
         throw error;
@@ -344,14 +345,15 @@ export function createOfflineAdapter(): CenterAgentMemoryAdapter {
     ensureOrganizationGraph: async () => undefined,
     deleteMemberUser: async () => "not_found",
     deleteOrganizationGraph: async () => "not_found",
-    search: async () => [],
+    search: async () => ({ items: [], status: "complete" }),
   };
 }
 
 export async function projectVerifiedCandidates(texts: string[]) {
   const adapter = createOfflineAdapter();
-  adapter.search = async () =>
-    texts.map((text, index) => ({
+  adapter.search = async () => ({
+    status: "complete",
+    items: texts.map((text, index) => ({
       captureMethod: "explicit_save",
       occurredAtMs: REPLAY_TIME,
       source: "space_conversation",
@@ -359,7 +361,8 @@ export async function projectVerifiedCandidates(texts: string[]) {
       sourceMessageId: `fixture-${index}`,
       subject: "organization",
       text,
-    }));
+    })),
+  });
   const replay = createReplay("fixture-projection", adapter);
   await replay.repository.upsertOrganizationSubject({
     organizationId: "fixture-projection",

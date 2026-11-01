@@ -13485,17 +13485,20 @@ function createMemoryAdapter(input: {
     deleteOrganizationGraph: vi.fn(async () => "deleted" as const),
     ensureMemberUser: vi.fn(async () => undefined),
     ensureOrganizationGraph: vi.fn(async () => undefined),
-    search: vi.fn(async (searchInput) => [
-      {
-        captureMethod: "automatic_turn" as const,
-        occurredAtMs: 900,
-        source: "ca_dm" as const,
-        sourceConversationId: "dm_1",
-        sourceMessageId: "message_1",
-        subject: searchInput.ref.subject.kind,
-        text: input.searchText,
-      },
-    ]),
+    search: vi.fn(async (searchInput) => ({
+      status: "complete" as const,
+      items: [
+        {
+          captureMethod: "automatic_turn" as const,
+          occurredAtMs: 900,
+          source: "ca_dm" as const,
+          sourceConversationId: "dm_1",
+          sourceMessageId: "message_1",
+          subject: searchInput.ref.subject.kind,
+          text: input.searchText,
+        },
+      ],
+    })),
   };
 }
 function createMemoryRepository(input: {

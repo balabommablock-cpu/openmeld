@@ -4749,8 +4749,8 @@ contract in Core, with Zep Cloud behind a provider adapter:
   the call only while organization memory is enabled; it rejects stale or
   forged calls from requester-private and externally shared environments even
   if an old or compromised worker attempts the RPC.
-- An explicit OpenMeld save supplies a message evidence reference and an exact
-  excerpt. Core reopens the current source, checks its version and excerpt, and
+- An explicit OpenMeld save supplies a message evidence reference and its complete
+  message text. Core reopens the current source, checks its version and text, and
   retains its author and version time. A recalled or changed message returns a
   conflict; the worker must read the source again. Memory is still historical
   reference data, not an adopted rule or action authority.

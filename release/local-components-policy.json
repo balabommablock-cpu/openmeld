@@ -1,12 +1,12 @@
 {
-  "version": "0.3.283",
+  "version": "0.3.284",
   "cli": {
     "updatePolicy": "available",
-    "reason": "Packages the Service connection-history upload fix. CLI commands and runtime protocols remain compatible."
+    "reason": "Refreshes the CLI bundle for the shared Space-memory schema. Existing workstation commands and Wake contracts remain compatible."
   },
   "service": {
     "updatePolicy": "available",
-    "reason": "Keeps pending connection evidence on disk when the acknowledged socket closes during upload preparation. The existing report and receipt remain compatible with older Core releases."
+    "reason": "Refreshes the bundled shared schema. The hosted memory change does not raise the workstation protocol floor."
   },
   "skills": {
     "updatePolicy": "available",

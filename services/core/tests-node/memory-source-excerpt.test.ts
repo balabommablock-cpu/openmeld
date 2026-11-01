@@ -51,7 +51,7 @@ it("preserves the original statement and date rather than promoting a later Agen
       ...input,
       fact: "Build permission is still pending.",
     })
-  ).rejects.toThrow("exact excerpt");
+  ).rejects.toThrow("complete message");
   await expect(
     resolveMemorySourceExcerpt({ ...input, sourceRef: undefined })
   ).rejects.toThrow("original message");
@@ -74,6 +74,13 @@ it("preserves the original statement and date rather than promoting a later Agen
       }),
     })
   ).rejects.toThrow("changed");
+  // A genuine substring can remove the condition or human-review requirement.
+  await expect(
+    resolveMemorySourceExcerpt({
+      ...input,
+      fact: "create the issue then build it yourself.",
+    })
+  ).rejects.toThrow("complete message");
   const edited = {
     ...source,
     data: {

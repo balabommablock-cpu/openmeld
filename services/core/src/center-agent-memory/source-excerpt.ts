@@ -85,7 +85,7 @@ export async function resolveMemorySourceExcerpt(input: {
   if (!sourceRef || sourceRef.spaceId !== input.origin.sourceConversationId) {
     throw conflict(
       "source_reference_required",
-      "Read the original message with source_evidence and provide its source reference and an exact excerpt."
+      "Read the original message with source_evidence and provide its source reference and its complete message text."
     );
   }
   const source = await input.readSource(sourceRef.sourceSignalId);
@@ -113,10 +113,10 @@ export async function resolveMemorySourceExcerpt(input: {
       "The original message changed or was recalled. Read its current version before saving."
     );
   }
-  if (!source.data.text.includes(input.fact)) {
+  if (source.data.text.trim() !== input.fact) {
     throw conflict(
       "source_excerpt_mismatch",
-      "Save an exact excerpt of the referenced message. An Agent-authored paraphrase is not the source statement."
+      "Save the complete message as written. If only part should be shared, ask the member to state that part in a separate message."
     );
   }
   return {
