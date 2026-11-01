@@ -529,6 +529,12 @@ origin SQL execution time or proof of Hyperdrive queue delay. Compare it with
 PlanetScale query insights and parent/caller spans before assigning a cause.
 Overlapping spans must not be added together.
 
+For a stalled Runtime Agent Controller Report, inspect the last
+`openmeld.stage` on `core.controller-reports.submit`. It distinguishes runtime
+identity lookup, policy read, report acceptance, usage recovery, model Inbox
+reconciliation, Member Agent catalog and PostgreSQL cleanup. The label records
+the stage entered, not whether a write committed.
+
 ## Space open read path
 
 Opening a Space reads bootstrap, members, and entry resolution. Their slow

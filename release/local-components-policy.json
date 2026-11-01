@@ -1,12 +1,12 @@
 {
-  "version": "0.3.282",
+  "version": "0.3.283",
   "cli": {
     "updatePolicy": "available",
-    "reason": "Preserves running work and task data during updates. Ordinary automatic updates use a strict idle-only shutdown request and defer to new work; older Services reject that optional request and require an explicit manual update. Existing user commands and responses remain compatible."
+    "reason": "Packages the Service connection-history upload fix. CLI commands and runtime protocols remain compatible."
   },
   "service": {
     "updatePolicy": "available",
-    "reason": "Adds atomic Host idle-switch admission, Claude process evidence and bounded reply review, and contains Codex request failures. Cloud Wake/result protocols are unchanged. Old CLI shutdown requests remain supported; no accepted work is forcibly stopped and no compatibility floor is raised."
+    "reason": "Keeps pending connection evidence on disk when the acknowledged socket closes during upload preparation. The existing report and receipt remain compatible with older Core releases."
   },
   "skills": {
     "updatePolicy": "available",

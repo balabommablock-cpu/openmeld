@@ -4474,8 +4474,17 @@ class CoreRpcEntrypoint extends WorkerEntrypoint<CoreBindings> {
   submitRuntimeAgentControllerReports(
     input: SubmitRuntimeAgentControllerReportsInput
   ): Promise<SubmitRuntimeAgentControllerReportsResponse> {
-    return withPostgresRequest(this.env.OPENMELD_POSTGRESQL, () =>
-      rpcSubmitRuntimeAgentControllerReportsWithMemberAgents(this.env, input)
+    return tracing.enterSpan("core.controller-reports.submit", (span) =>
+      withPostgresRequest(this.env.OPENMELD_POSTGRESQL, async () => {
+        const response =
+          await rpcSubmitRuntimeAgentControllerReportsWithMemberAgents(
+            this.env,
+            input,
+            (stage) => span.setAttribute("openmeld.stage", stage)
+          );
+        span.setAttribute("openmeld.stage", "postgres_cleanup");
+        return response;
+      })
     );
   }
   syncMemberAgents(

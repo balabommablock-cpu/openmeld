@@ -2543,6 +2543,11 @@ They may reap local expired leases because that is part of route lookup
 semantics, but they must not synchronously run RuntimeCoordinator or other
 background housekeeping scans.
 
+The three HTTP lookups answer from Hub session and lease state. They use the
+source reader's currently valid release snapshot for compatibility projection.
+Constructor, registration and heartbeat refresh the policy in the background.
+New Wake admission checks it separately.
+
 Required local-component policy and optional binary-channel availability use
 independent R2 reads and pending refreshes. The source reader owns their bounded
 validity; RuntimeTransportHub must not retain an unchecked per-instance policy.
@@ -4080,7 +4085,10 @@ days on load/write. Repeated adjacent observations are aggregated; truncation
 is explicit. Pending event writes are capped at 128 so a stalled filesystem
 cannot accumulate unbounded work. Writes and uploads never block registration
 or heartbeat.
-Completed incidents upload after registration, and an interrupted incident from
+Only the current connection's acknowledgement enables incident uploads. A close
+or the next connection attempt pauses uploads, including those still preparing
+the journal. Recheck this condition before sending. Completed incidents upload
+after registration, and an interrupted incident from
 a previous Service process uploads on its next connection. Receipt replay is
 idempotent. Upload retries have their own bounded backoff, retry promptly on
 reconnection, and cannot reconnect the carrier; an account change prevents uploading old evidence with new account

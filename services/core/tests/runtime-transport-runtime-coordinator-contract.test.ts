@@ -5640,7 +5640,7 @@ describe("runtime transport runtime coordinator transport contract", () => {
       }
     );
   });
-  it("finishes constructor and registration gates while required policy remains unreadable", async () => {
+  it("finishes constructor, registration and route lookups while required policy remains unreadable", async () => {
     const transport = (env as unknown as CoreBindings)
       .OPENMELD_RUNTIME_TRANSPORT;
     if (!transport) {
@@ -5746,6 +5746,42 @@ describe("runtime transport runtime coordinator transport contract", () => {
             })
           );
           expect(r2CallsInsideGate).not.toContain(true);
+          // The session has registered, but the required policy read is still
+          // blocked. Observe all three HTTP results before releasing that read.
+          const lookupInput = {
+            v: RUNTIME_TRANSPORT_SCHEMA_VERSION,
+            ownerUserId: "owner-policy-gate",
+          };
+          const lookups = Promise.all([
+            fetchRuntimeTransportJson(
+              hub,
+              "/lookup-owner-service",
+              lookupInput
+            ),
+            fetchRuntimeTransportJson(hub, "/lookup-route", {
+              ...lookupInput,
+              profileId: TARGET_AGENT_PROFILE_ID,
+            }),
+            fetchRuntimeTransportJson(hub, "/lookup-routes-batch", {
+              ...lookupInput,
+              profileIds: [TARGET_AGENT_PROFILE_ID],
+            }),
+          ]);
+          await vi.waitFor(async () => {
+            const responses = await lookups;
+            expect(responses.map((response) => response.status)).toEqual([
+              200, 404, 200,
+            ]);
+          });
+          const [owner] = await lookups;
+          await expect(owner.json()).resolves.toMatchObject({
+            online: true,
+            sessions: [
+              expect.objectContaining({
+                daemonSessionId: "session-policy-gate",
+              }),
+            ],
+          });
           expect(
             resolveLocalComponentUpdateProjection({
               generatedAt: new Date().toISOString(),
