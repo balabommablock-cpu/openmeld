@@ -5777,7 +5777,8 @@ caller without a reference gets a conflict and makes no provider write.
 
 - PostgreSQL migration `0053_center_agent_space_memory` adds a nullable Space ID
   and the constrained `space` subject kind. Existing member/organization rows and
-  old writers remain valid. Apply the migration before the new Core reader/writer.
+  old writers remain valid. Historical D1 imports leave this column NULL for
+  existing member and Organization subjects. Apply the migration before the new Core reader/writer.
 - Remote Agent must be upgraded before Core emits `subject=space` or the optional
   retained-search source metadata; older strict receivers reject those additions.
   The new receiver accepts old envelopes. New save callers sending a reference to
