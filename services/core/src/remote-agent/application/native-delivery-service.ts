@@ -2,7 +2,7 @@ import {
   getPostgresDatabase,
   type PostgresDatabase,
 } from "@openmeld/db/postgresql";
-import type { Profile, SignalEnvelope, SpaceMeta } from "@openmeld/protocol";
+import type { Profile, SignalEnvelope } from "@openmeld/protocol";
 import type {
   PluginChannelSelection,
   PluginChannelSourceProof,
@@ -85,7 +85,6 @@ import {
   createAuthenticatedSpaceAccessContext,
   createDispatchContinuationSpaceAccessContext,
   renderDispatchSourceText,
-  type SpaceAccessContext,
 } from "@openmeld/space";
 import {
   type AgentProfileBindingRecord,
@@ -129,7 +128,6 @@ import {
   DISPATCH_HINT_SYSTEM_PROFILE_NAME,
 } from "../../dispatch/rules/dispatch-hint-policy";
 import type { CoreBindings } from "../../lib/bindings";
-
 import { readEnabledOrganizationSkillReleaseSelection } from "../../organization-skills/organization-skill-service";
 import {
   readOrganizationAccountIdentityProjection,
@@ -165,6 +163,7 @@ import { RUNTIME_COORDINATOR_PRE_AGENT_STOP_REQUESTED_REASON_CODE } from "../../
 import { CORE_LOG_EVENTS } from "../../shared/observability/log-events";
 import { parseRpcErrorPayload } from "../../shared/rpc/rpc-json";
 import type { SpaceBootstrapTimingCollector } from "../../space/application/space-bootstrap-timing";
+import { readSpaceGuide } from "../../space/application/space-guide";
 import { SPACE_FINAL_OUTCOME_STOPPED_ERROR_CODE } from "../../space/application/space-signal-service";
 import { truncateSpaceTextToProtocolLimit } from "../../space/application/space-text";
 import {
@@ -319,7 +318,10 @@ import {
   requirePersonalRemoteAgentBinding,
 } from "./personal-remote-agent-binding";
 import { buildMessageChannelProviderPublicationUuid } from "./provider-publication-uuid";
-import { resolveRemoteAgentNativeDeliveryRuntimeConversationId } from "./remote-agent-conversation-continuity";
+import {
+  resolveCenterAgentSpaceConversationId,
+  resolveRemoteAgentNativeDeliveryRuntimeConversationId,
+} from "./remote-agent-conversation-continuity";
 import { attachCenterAgentMemoryToTurnEnvelope as attachCenterAgentMemoryToTurnEnvelopeImpl } from "./remote-agent-memory-context";
 import { resolveRemoteAgentRuntimeAvailability } from "./remote-agent-runtime-policy";
 import { truncateRemoteAgentTriggerText } from "./remote-agent-trigger-text";
@@ -1025,8 +1027,9 @@ export async function submitRemoteAgentNativeDelivery(
                       name: "openmeld_remote_admission_space_guide",
                     },
                     () =>
-                      readCurrentRemoteAgentSpaceGuide({
+                      readSpaceGuide({
                         env: input.env,
+                        organizationId: input.binding.organizationId,
                         spaceAccess:
                           createDispatchContinuationSpaceAccessContext({
                             attemptId: input.executionAttemptId,
@@ -1144,7 +1147,15 @@ export async function submitRemoteAgentNativeDelivery(
               },
             };
           })()
-        : { v: 2 }),
+        : {
+            v: 2,
+            conversationId: resolveCenterAgentSpaceConversationId({
+              spaceId: input.message.spaceId,
+              sourceSignalId: input.message.sourceEventId,
+              threadContext: input.message.threadContext,
+              isCenterAgentDm: turnEnvelope.space.isCenterAgentDm,
+            }),
+          }),
       organizationId: input.binding.organizationId,
       spaceId: input.message.spaceId,
       agentProfileId: input.message.targetProfileId,
@@ -3295,7 +3306,7 @@ type RemoteAgentTaskContinuationWorkerProtocol =
           v: 2;
         }
       >,
-      "modelRoute" | "v"
+      "modelRoute" | "v" | "conversationId"
     >
   | Pick<
       Extract<
@@ -3318,7 +3329,13 @@ function inheritRemoteAgentTaskContinuationWorkerProtocol(
     case 1:
       return { v: request.v };
     case 2:
-      return { modelRoute: request.modelRoute, v: request.v };
+      return {
+        modelRoute: request.modelRoute,
+        v: request.v,
+        ...(request.conversationId
+          ? { conversationId: request.conversationId }
+          : {}),
+      };
     case 4:
       return {
         conversationId: request.conversationId,
@@ -4556,8 +4573,9 @@ async function resolveRoutineTurnEnvelopeWithMemory(input: {
     webAppUrl: input.env.WEB_APP_URL,
   });
   if (destination.kind === "space") {
-    const spaceGuide = await readCurrentRemoteAgentSpaceGuide({
+    const spaceGuide = await readSpaceGuide({
       env: input.env,
+      organizationId: input.routine.organizationId,
       spaceAccess: createAuthenticatedSpaceAccessContext({
         requestContext: buildRemoteAgentRoutineSubmissionContext({
           run: input.run,
@@ -7209,6 +7227,15 @@ async function rememberCenterAgentCompletedTurn(input: {
   if (!(source && speakerMember && userMessage)) {
     return;
   }
+  if (source === "space_conversation") {
+    const designation = await readCenterAgentDesignationRecord({
+      db: getPostgresDatabase(input.env),
+      organizationId: input.delivery.organizationId,
+    });
+    if (designation?.agentProfileId !== input.delivery.profileId) {
+      return;
+    }
+  }
   const messageChannelProvider =
     source === "message_channel_conversation"
       ? input.delivery.messageChannelLocator?.provider
@@ -7635,28 +7662,6 @@ async function readRemoteAgentSpaceSourceSignal(input: {
       (candidate) => readSignalId(candidate) === input.sourceSignalId
     ) ?? null
   );
-}
-async function readCurrentRemoteAgentSpaceGuide(input: {
-  env: CoreBindings;
-  spaceAccess: SpaceAccessContext;
-  spaceId: string;
-}): Promise<string | null> {
-  const stub = resolveSpaceStub(input.env.OPENMELD_SPACES, input.spaceId) as {
-    rpcGetMeta(request: {
-      spaceAccess: SpaceAccessContext;
-      spaceId: string;
-    }): Promise<SpaceMeta>;
-  } | null;
-  if (!stub?.rpcGetMeta) {
-    throw new Error(
-      `Remote Agent turn envelope could not read Space ${input.spaceId} metadata`
-    );
-  }
-  const meta = await stub.rpcGetMeta({
-    spaceAccess: input.spaceAccess,
-    spaceId: input.spaceId,
-  });
-  return normalizeOptionalText(meta.guide);
 }
 function withRemoteAgentSpaceGuide(
   turnEnvelope: RemoteAgentTurnEnvelope,

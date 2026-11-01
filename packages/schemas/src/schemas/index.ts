@@ -38,6 +38,10 @@ export {
   centerAgentReadAuditJournalRpcInputSchema,
 } from "./http/center-agent-evidence";
 export {
+  centerAgentReadSpaceGuideRequestSchema,
+  centerAgentReadSpaceGuideResponseSchema,
+} from "./http/center-agent-knowledge";
+export {
   CENTER_AGENT_RETAINED_MEMORY_MAX_ITEMS,
   CENTER_AGENT_RETAINED_MEMORY_MAX_SOURCES,
   CENTER_AGENT_RETAINED_MEMORY_MAX_TEXT_CHARS,
@@ -46,6 +50,14 @@ export {
   centerAgentSearchMemoryResponseSchema,
   centerAgentSearchMemoryRpcInputSchema,
 } from "./http/center-agent-memory-search";
+export {
+  centerAgentWorkTargetRecordSchema,
+  centerAgentWorkTargetRequestSchema,
+  centerAgentWorkTargetResponseSchema,
+  centerAgentWorkTargetSchema,
+  centerAgentWorkTargetSelectionSchema,
+  centerAgentWorkTargetSourceInputSchema,
+} from "./http/center-agent-work-target";
 export {
   LOCAL_AGENT_REASONING_MAX_CHARS,
   localAgentReasoningPreferencesRpcSchema,
@@ -62,6 +74,12 @@ export {
   organizationMemberPresenceSchema,
   organizationMemberPresenceWriteResponseSchema,
 } from "./http/organization-member-presence";
+export {
+  approvedPluginActionSchema,
+  pluginActionRecoveryInputSchema,
+  readApprovedPluginActionInputSchema,
+  readApprovedPluginActionResponseSchema,
+} from "./http/plugin-action-recovery";
 export {
   listPluginActionRequestsInputSchema,
   listPluginActionRequestsResponseSchema,
@@ -2055,6 +2073,7 @@ export {
   organizationDocumentPromptContextRpcInputSchema,
   organizationDocumentRouteParamsSchema,
   organizationDocumentSchema,
+  organizationDocumentSourceReferenceSchema,
   organizationDocumentSummarySchema,
   profileReportTypeSchema,
   recordCenterAgentMemberResearchComputerFileResponseSchema,
@@ -2302,6 +2321,7 @@ export {
 } from "./http/plugin-delegation";
 export {
   connectorActionOutcomeUnknownSchema,
+  linearIssuePreviewNamesSchema,
   pluginActionEffectSchema,
   pluginRuntimeRequestSchema,
   pluginRuntimeResponseSchema,
@@ -2375,6 +2395,7 @@ export {
   createProjectBodySchema,
   createProjectResponseSchema,
   createProjectRpcInputSchema,
+  githubRepositoryTargetSchema,
   isLinearIssueCreateAction,
   listProjectsQuerySchema,
   listProjectsResponseSchema,
@@ -2478,6 +2499,7 @@ export {
   listSensitiveOperationAuditResponseSchema,
   MEMBER_AGENT_SENSITIVE_OPERATION_AUDIT_ROUTE,
   memberAgentSensitiveOperationAuditRouteParamsSchema,
+  permissionModeAuditChangeSchema,
   type RequestCredential,
   type RequestCredentialKind,
   RISK_WINDOW_EXECUTION_LIMIT,
@@ -2491,6 +2513,7 @@ export {
   SENSITIVE_OPERATION_SOURCE_REQUIRED_CODE,
   type SensitiveOperation,
   type SensitiveOperationAuditEvent,
+  type SensitiveOperationAuditQuery,
   type SensitiveOperationAuthorization,
   type SensitiveOperationAuthorizationInput,
   type SensitiveOperationDecision,
@@ -2498,6 +2521,7 @@ export {
   type SensitiveOperationOutcomeInput,
   type SensitiveOperationSourceKind,
   sensitiveOperationAuditEventSchema,
+  sensitiveOperationAuditQuerySchema,
   sensitiveOperationAuthorizationInputSchema,
   sensitiveOperationAuthorizationSchema,
   sensitiveOperationDecisionSchema,
@@ -2645,11 +2669,13 @@ export {
   projectSpaceNativeDeliveryTraceFinalVisibleOutcome,
   resolveRuntimeCoordinatorHeadStatusRootCause,
   resolveSpaceDispatchTraceRootCause,
+  SPACE_DISPATCH_TRACE_EXECUTION_CONTEXT_CONTRACT_VERSION,
   SPACE_DISPATCH_TRACE_NATIVE_DELIVERY_CONTRACT_VERSION,
   SPACE_DISPATCH_TRACE_PROMPT_PREVIEW_MAX_CHARS,
   SPACE_DISPATCH_TRACE_RESPONSE_CONTRACT_VERSION,
   SPACE_DISPATCH_TRACE_RESPONSE_CONTRACT_VERSION_HEADER,
   SPACE_DISPATCH_TRACE_RESPONSE_CONTRACT_VERSION_PREVIOUS,
+  SPACE_DISPATCH_TRACE_SDK_SCHEDULES_CONTRACT_VERSION,
   SPACE_DISPATCH_TRACE_WAITING_EVIDENCE_CONTRACT_VERSION,
   spaceDispatchTraceAttemptStatusSchema,
   spaceDispatchTraceClaimLeaseSchema,
@@ -2949,6 +2975,7 @@ export {
   spaceTaskIdSchema,
   spaceTaskMutationReceiptSchema,
   spaceTaskPhaseSchema,
+  spaceTaskRequesterRepresentationSchema,
   spaceTaskResponseSchema,
   spaceTaskResultSchema,
   spaceTaskReviewSchema,

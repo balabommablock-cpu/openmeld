@@ -1,15 +1,15 @@
 {
-  "version": "0.3.276",
+  "version": "0.3.284",
   "cli": {
     "updatePolicy": "available",
-    "reason": "Releases the existing CLI with consistent published component identities. Existing command contracts and the 0.3.273 required floor remain supported."
+    "reason": "Refreshes the CLI bundle for the shared Space-memory schema. Existing workstation commands and Wake contracts remain compatible."
   },
   "service": {
     "updatePolicy": "available",
-    "reason": "Reconciles the published Service bundle identity without changing its runtime contract. Existing 0.3.273 Services remain compatible."
+    "reason": "Refreshes the bundled shared schema. The hosted memory change does not raise the workstation protocol floor."
   },
   "skills": {
     "updatePolicy": "available",
-    "reason": "Guidance clarifies existing command prefixes, addressing, and Computer operations without adding runtime authority."
+    "reason": "No managed Skills source changes; existing Skills remain compatible."
   }
 }
