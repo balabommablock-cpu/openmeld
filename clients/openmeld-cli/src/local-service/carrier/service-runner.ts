@@ -1220,14 +1220,14 @@ const runAccountBoundDaemonServiceLoop = async (
 
     while (!stopRequested) {
       try {
-        connectionEvidence.beginAttempt();
+        const connectionDiagnosticId = connectionEvidence.beginAttempt();
         connectionState.set("connecting", {
           reason: resolveConnectingReason(reconnectAttempt),
         });
         const connectionUrl = new URL(toDaemonStreamUrl(baseUrl));
         connectionUrl.searchParams.set(
           SERVICE_CONNECTION_ID_QUERY_PARAMETER,
-          connectionEvidence.connectionDiagnosticId
+          connectionDiagnosticId
         );
         const wsUrl = connectionUrl.toString();
         const authContext = await resolveDaemonStreamAuthContext({
@@ -1311,7 +1311,8 @@ const runAccountBoundDaemonServiceLoop = async (
               if (typeof updates.heartbeatAt === "string") {
                 connectionEvidence.acknowledged(
                   updates.heartbeatAt,
-                  connectionState.get().state !== "online"
+                  connectionState.get().state !== "online",
+                  connectionDiagnosticId
                 );
                 connectionState.set("online");
                 reconnectAttempt = 0;

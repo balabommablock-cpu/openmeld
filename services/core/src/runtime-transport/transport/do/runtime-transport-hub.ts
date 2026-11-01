@@ -11354,12 +11354,11 @@ export class RuntimeTransportHub extends DurableObject<CoreBindings> {
         { status: 400 }
       );
     }
-    const { manifest } = await this.refreshLocalComponentsRelease();
     const response = lookupRoute(this.state, parsed.data, {
       persistRuntimeRecords: this.persistRuntimeRecords,
       cleanupExpiredPendingDispatches: this.cleanupExpiredPendingDispatches,
       recordReapedReadinessProfiles: this.publishReapedReadinessProfiles,
-      localComponentsManifest: manifest,
+      localComponentsManifest: getCachedCoreLocalComponentsRelease().manifest,
     });
     const status = response.online ? 200 : 404;
     return Response.json(response, { status });
@@ -11373,12 +11372,11 @@ export class RuntimeTransportHub extends DurableObject<CoreBindings> {
     if (!parsed.success) {
       return Response.json({ routes: {} }, { status: 400 });
     }
-    const { manifest } = await this.refreshLocalComponentsRelease();
     const response = lookupRoutesBatch(this.state, parsed.data, {
       persistRuntimeRecords: this.persistRuntimeRecords,
       cleanupExpiredPendingDispatches: this.cleanupExpiredPendingDispatches,
       recordReapedReadinessProfiles: this.publishReapedReadinessProfiles,
-      localComponentsManifest: manifest,
+      localComponentsManifest: getCachedCoreLocalComponentsRelease().manifest,
     });
     return Response.json(response, { status: 200 });
   }
@@ -11397,12 +11395,11 @@ export class RuntimeTransportHub extends DurableObject<CoreBindings> {
         { status: 400 }
       );
     }
-    const { manifest } = await this.refreshLocalComponentsRelease();
     const response = lookupOwnerService(this.state, parsed.data, {
       persistRuntimeRecords: this.persistRuntimeRecords,
       cleanupExpiredPendingDispatches: this.cleanupExpiredPendingDispatches,
       recordReapedReadinessProfiles: this.publishReapedReadinessProfiles,
-      localComponentsManifest: manifest,
+      localComponentsManifest: getCachedCoreLocalComponentsRelease().manifest,
     });
     const validated =
       runtimeTransportLookupOwnerServiceResponseSchema.safeParse(response);

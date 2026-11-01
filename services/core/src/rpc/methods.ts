@@ -5806,7 +5806,8 @@ export async function rpcSubmitRuntimeRegistration(
 }
 export async function rpcSubmitRuntimeAgentControllerReports(
   env: CoreBindings,
-  input: SubmitRuntimeAgentControllerReportsInput
+  input: SubmitRuntimeAgentControllerReportsInput,
+  markStage?: (stage: string) => void
 ): Promise<SubmitRuntimeAgentControllerReportsResponse> {
   const context = requireRpcContext(input.context);
   const request = requireRuntimeReportingRequest(context, input.deviceId);
@@ -5847,6 +5848,7 @@ export async function rpcSubmitRuntimeAgentControllerReports(
       })),
     });
   }
+  markStage?.("runtime_identity_read");
   const openMeldServiceRuntimeIdVerification =
     await verifySubmittedRuntimeIdForLookup({
       db,
@@ -5863,11 +5865,13 @@ export async function rpcSubmitRuntimeAgentControllerReports(
     });
   }
   const reports: SubmitRuntimeAgentControllerReportResult[] = [];
+  markStage?.("release_policy_read");
   const authFreshnessRequired = isServiceAuthFreshnessRequired(
     (await readCoreLocalComponentsRelease(env.OPENMELD_CLI_RELEASES)).manifest
   );
   for (const report of body.data.reports) {
     const acceptedAtMs = Date.now();
+    markStage?.("report_acceptance");
     const result = await acceptRuntimeAgentControllerReport({
       authFreshnessRequired,
       nowMs: acceptedAtMs,
@@ -5893,6 +5897,7 @@ export async function rpcSubmitRuntimeAgentControllerReports(
     });
     if (result.status === "accepted") {
       try {
+        markStage?.("usage_recovery");
         await notifyAgentProfileWorkUsageRecoveryAvailable({
           bindingStore: {
             listBindings: async (bindingInput) =>
@@ -5939,6 +5944,7 @@ export async function rpcSubmitRuntimeAgentControllerReports(
       }
     }
     if (result.status === "accepted") {
+      markStage?.("model_inbox_reconciliation");
       await reconcileRuntimeAgentModelInboxes({
         env,
         ownerUserId: request.userId,
